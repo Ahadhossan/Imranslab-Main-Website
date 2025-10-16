@@ -1,0 +1,16 @@
+{
+    "width": 2550,
+    "height": 3300,
+    "dpi": 300,
+    "gradient_intensity": 25,
+    "border_thickness": 15,
+    "paper_color": [
+        250,
+        250,
+        245
+    ],
+    "margin": 30,
+    "line_thickness": 1,
+    "output_file": "magazine.png",
+    "output_dir": "/home/imranspc/bedrock/ocr/test_data/synthetic_data/synthetic_data_factory/paper_type/megazine"
+}

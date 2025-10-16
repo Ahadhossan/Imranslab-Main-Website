@@ -1,0 +1,16 @@
+{
+    "width": 2850,
+    "height": 1237,
+    "dpi": 300,
+    "gradient_intensity": 20,
+    "border_thickness": 8,
+    "paper_color": [
+        245,
+        245,
+        240
+    ],
+    "margin": 15,
+    "line_thickness": 1,
+    "output_file": "envelope.png",
+    "output_dir": "/home/imranspc/bedrock/ocr/test_data/synthetic_data/synthetic_data_factory/paper_type/envelope"
+}

@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres-team-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: imranslab-team
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - /postgresql_team/data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - team
+
+  django:
+    build:
+      context: ../../
+      dockerfile: docker/imranslab-team/Dockerfile.backend
+    container_name: imranslab-team-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    volumes:
+      - /imranslab_team/media_from_django:/app/media
+    environment:
+      - DATABASE_NAME=imranslab-team
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=postgres-team-db
+      - DATABASE_PORT=5432
+      - DJANGO_SUPERUSER_USERNAME:admin
+      - DJANGO_SUPERUSER_EMAIL:admin@admin.com
+      - DJANGO_SUPERUSER_PASSWORD:admin1234
+    networks:
+      - team
+      - cloudflared
+
+  imranslab-team:
+    build:
+      context: ../../
+      dockerfile: docker/imranslab-team/Dockerfile.web
+    container_name: imranslab-team-web
+    restart: unless-stopped
+    volumes:
+      - ../../config/nginx/react-app.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - django
+    networks:
+      - cloudflared
+      - team
+
+networks:
+  team:
+    name: imranslab_team
+  cloudflared:
+    external: true
+    name: cloudflared

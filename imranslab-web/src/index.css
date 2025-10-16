@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body {
+    @apply bg-[#fff] text-gray-300 font-inter scroll-smooth;
+}
+
+@layer utilities {
+    .flex-center {
+        @apply flex items-center;
+    }
+    .flex-center-between {
+        @apply flex items-center justify-between;
+    }
+}
+
+
+/* Optional custom theme */
+
+
+/* .hero-bg {
+    background: linear-gradient( rgb(8, 8, 8, 0.9), rgba(24, 24, 24, 0.9), rgb(45, 47, 48, 0.0)), url('https://i.ibb.co/DHdmdQS8/pexels-cottonbro-6805161.jpg');
+    background-size: cover;
+    background-position: center;
+} */
+
+.header-bg {
+    background: linear-gradient( rgb(8, 8, 8, 0.9), rgba(24, 24, 24, 0.9), rgba(8, 1, 1, 0.9)), url('https://i.ibb.co/CsM20qQ7/banner.png');
+    background-size: cover;
+    background-position: center;
+}

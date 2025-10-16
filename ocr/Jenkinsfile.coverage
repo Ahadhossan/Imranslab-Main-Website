@@ -1,0 +1,100 @@
+pipeline {
+  agent any
+
+  environment {
+    IMAGE_NAME = 'ocr-test:latest'
+    COV_XML_PATH = 'logs/test-runs/coverage.xml'  // updated from logs/coverage.xml
+    JUNIT_RESULTS = 'logs/test-runs/junit_*.xml'
+    HTML_REPORT_DIR = 'logs/test-runs/htmlcov'
+  }
+
+  stages {
+    stage('Clean & Checkout') {
+      steps {
+        echo '🧹 Cleaning workspace'
+        deleteDir()
+        echo '📥 Checking out code'
+        checkout scm
+      }
+    }
+
+    stage('Build Test Image') {
+      steps {
+        dir('ocr') {
+          echo "🐳 Building Docker image: ${IMAGE_NAME}"
+          sh "docker build -t ${IMAGE_NAME} -f Docker/Dockerfile.coverage ."
+        }
+      }
+    }
+
+    stage('Run Tests & Coverage') {
+      steps {
+        dir('ocr') {
+          echo '🧪 Running tests inside container with volume mounting'
+          script {
+            def ocrDir = pwd()
+            sh """
+              mkdir -p logs/test-runs/htmlcov  # ✅ Ensure volume mount works properly
+              echo '📂 Host OCR dir: ${ocrDir}'
+              docker run --rm \\
+                -v "${ocrDir}":/app:rw \\
+                ${IMAGE_NAME}
+            """
+          }
+        }
+      }
+    }
+
+    stage('Debug Host Logs') {
+      steps {
+        dir('ocr') {
+          echo '🔍 Listing generated files on host after Docker run...'
+          sh '''
+            echo "========== [DEBUG] logs/test-runs/ =========="
+            find logs/test-runs || echo "❌ logs/test-runs not found"
+            echo "========== [DEBUG] logs/test-runs/htmlcov/ =========="
+            find logs/test-runs/htmlcov || echo "❌ logs/test-runs/htmlcov not found"
+            echo "========== [DEBUG] Coverage XML =========="
+            cat logs/coverage.xml || echo "❌ logs/coverage.xml not found"
+            echo "========== [DEBUG] Search for JUnit XMLs =========="
+            find logs/test-runs -name 'junit_*.xml' || echo "❌ No JUnit XMLs found"
+          '''
+        }
+      }
+    }
+
+    stage('Publish Test & Coverage Results') {
+      steps {
+        dir('ocr') {
+          echo '✅ Publishing JUnit XML test results'
+          junit allowEmptyResults: true, testResults: "${JUNIT_RESULTS}"
+
+          echo '📊 Publishing Cobertura coverage XML (for Quality Gate view)'
+          publishCoverage adapters: [[
+            $class: 'io.jenkins.plugins.coverage.adapter.CoberturaReportAdapter',
+            path: "${COV_XML_PATH}"
+          ]]
+
+          echo '🌐 Archiving HTML report for manual browsing'
+          archiveArtifacts artifacts: "${HTML_REPORT_DIR}/**", fingerprint: true
+
+          echo '📈 Publishing HTML Coverage tab in Jenkins' 
+          publishHTML target: [
+            reportDir: "${HTML_REPORT_DIR}",
+            reportFiles: 'index.html',
+            reportName: 'HTML Code Coverage Report',
+            keepAll: true,
+            alwaysLinkToLastBuild: true
+          ]
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      echo '🧹 Final cleanup after build'
+      cleanWs()
+    }
+  }
+}

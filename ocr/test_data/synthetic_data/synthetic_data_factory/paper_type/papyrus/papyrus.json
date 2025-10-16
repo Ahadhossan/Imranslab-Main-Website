@@ -1,0 +1,23 @@
+{
+    "width": 2480,
+    "height": 3508,
+    "dpi": 300,
+    "gradient_intensity": 30,
+    "border_thickness": 10,
+    "paper_color": [
+        210,
+        180,
+        140
+    ],
+    "margin": 20,
+    "line_thickness": 1,
+    "fiber_count": 200,
+    "fiber_thickness": 1,
+    "fiber_color": [
+        160,
+        120,
+        60
+    ],
+    "output_file": "papyrus.png",
+    "output_dir": "/home/imranspc/bedrock/ocr/test_data/synthetic_data/synthetic_data_factory/paper_type/papyrus"
+}

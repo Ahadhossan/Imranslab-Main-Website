@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Add a New Address</h1>
+<form method="post" class="form-group">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Save Address</button>
+</form>
+<a href="{% url 'address_list' %}" class="btn btn-secondary">Back to Address List</a>
+{% endblock %}

@@ -1,0 +1,28 @@
+FROM ubuntu:22.04
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    libpq-dev \
+    build-essential \
+    pkg-config \
+    default-libmysqlclient-dev \
+    postgresql-client
+
+RUN rm -rf /var/lib/apt/lists/*
+
+COPY imranslab-team-backend/requirements.txt .
+
+RUN python3 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+RUN pip install --upgrade pip \
+ && pip install -r requirements.txt
+
+COPY imranslab-team-backend/ .
+EXPOSE 8000
+
+ENTRYPOINT ["./wait-for-postgres.sh"]
+
+CMD ["sh", "-c", "python manage.py migrate && python manage.py createsuperuser --noinput || true && python manage.py runserver 0.0.0.0:8000"]

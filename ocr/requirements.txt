@@ -1,0 +1,43 @@
+## Tools
+
+# linting
+flake8
+
+# core testing
+pytest-datadir
+pytest
+pytest-xdist
+pytest-timeout
+
+# performance testing
+pytest-benchmark
+pytest-cov
+
+# image processing
+opencv-python-headless==4.9.0.80
+numpy<2.0.0
+
+# config
+PyYAML
+
+# memory & resource profiling
+memory-profiler
+psutil
+
+# ocr-preprocessing
+pytesseract
+Pillow
+
+# microservices
+flask
+requests
+
+hypothesis
+scikit-image
+
+# ci
+google-api-python-client>=2.95.0
+google-auth>=2.25.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.0.0
+google-api-core>=2.11.0

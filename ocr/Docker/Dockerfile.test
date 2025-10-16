@@ -1,0 +1,36 @@
+# Use latest stable Python
+FROM python:3.12
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PYTHONPATH="/app:${PYTHONPATH}" \
+    PIP_INDEX_URL=http://192.168.2.147:3141/root/pypi/+simple/ \
+    PIP_TRUSTED_HOST=192.168.2.147
+
+# Inject apt-cacher proxy into sources.list
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+    sed -i 's|http://|http://192.168.2.127:3142/|g' /etc/apt/sources.list
+
+# Install system dependencies
+COPY apt-requirements.txt /tmp/apt-requirements.txt
+RUN apt-get update \
+ && xargs -a /tmp/apt-requirements.txt apt-get install -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/* /tmp/apt-requirements.txt
+
+# Create working directory and install Python packages
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt \
+ && pip check
+
+# Copy project files and test runner
+COPY . .
+
+# Make test runner executable
+RUN chmod +x run_tests.sh
+
+# Run tests on container start
+ENTRYPOINT ["./run_tests.sh"]

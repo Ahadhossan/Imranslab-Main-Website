@@ -1,0 +1,23 @@
+# Use slim Python 3.9 base
+FROM python:3.9-slim
+
+# Install dependencies for performance testing
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 libsm6 libxext6 libxrender1 \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Install necessary tools for performance testing (e.g., pytest-benchmark)
+RUN pip install pytest-benchmark
+
+# Copy the project
+COPY . .
+
+# Run the performance tests
+CMD ["pytest", "--benchmark-enable", "--timeout=30", "--timeout-method=thread", "-n 4", "--dist=loadscope", "--cov=preprocessing", "--cov-report=term", "--cov-report=html"]

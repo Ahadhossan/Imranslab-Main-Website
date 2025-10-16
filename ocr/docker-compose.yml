@@ -1,0 +1,30 @@
+services:
+  test-runner:
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile.test
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:${PYTHONPATH:-}
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/logs/test-runs/latest.log"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  coverage-runner:
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile.coverage
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:${PYTHONPATH:-}
+    healthcheck:
+      test: [ "CMD-SHELL", "test -f /app/logs/test-runs/latest.log" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3

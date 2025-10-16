@@ -1,0 +1,5 @@
+read -p "Which dpi folder(s) you want to sync? (Example: 300 600 2400): " dpi; for d in $dpi; do rsync -ah --info=progress2 ~/sftp_storage/bedrock/giant_library/Output/AI_Engineering_Building_Applications_-_Chip_Huyen/ocr/"ocr_eachpage_${d}dpi"/ ~/bedrock/giant_library/Output/AI_Engineering_Building_Applications_-_Chip_Huyen/ocr/"ocr_eachpage_${d}dpi"/; done
+
+Delete certain dpi folder from img
+read -p "Enter folder(s) to delete from destination: " folders && for f in $folders; do tar cf - ~/bedrock/giant_library/Output/AI_Engineering_Building_Applications_-_Chip_Huyen/img/"$f"dpi | pv -s $(du -sb ~/bedrock/giant_library/Output/AI_Engineering_Building_Applications_-_Chip_Huyen/img/"$f"dpi | awk '{print $1}') > /dev/null && rm -rf ~/bedrock/giant_library/Output/AI_Engineering_Building_Applications_-_Chip_Huyen/img/"$f"dpi; done
+

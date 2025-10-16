@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  instructor_tests:
+    build: .
+    container_name: instructor_tests
+    environment:
+      - TEST_SUITE=instructor/tests
+    volumes:
+      - ./scripts/test_reports:/app/scripts/test_reports
+    command: ["pytest", "instructor/tests", "--html=/app/scripts/test_reports/instructor_report.html", "--self-contained-html"]
+
+  university_tests:
+    build: .
+    container_name: university_tests
+    environment:
+      - TEST_SUITE=university/tests
+    volumes:
+      - ./scripts/test_reports:/app/scripts/test_reports
+    command: ["pytest", "university/tests", "--html=/app/scripts/test_reports/university_report.html", "--self-contained-html"]
+
+  jira_tests:
+    build: .
+    container_name: jira_tests
+    environment:
+      - TEST_SUITE=jira_integration/tests
+    volumes:
+      - ./scripts/test_reports:/app/scripts/test_reports
+    command: ["pytest", "jira_integration/tests", "--html=/app/scripts/test_reports/jira_report.html", "--self-contained-html"]
+
+  merge_reports:
+    build: .
+    container_name: merge_reports
+    depends_on:
+      - instructor_tests
+      - university_tests
+      - jira_tests
+    volumes:
+      - ./scripts/test_reports:/app/scripts/test_reports
+    command: ["bash", "/app/scripts/merge_reports.sh"]

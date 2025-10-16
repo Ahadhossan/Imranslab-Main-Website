@@ -1,0 +1,27 @@
+# Ignore Dockerfile itself
+tests/Dockerfile
+
+# Ignore any configuration files or scripts that are not needed
+*.log
+*.md
+
+# Ignore directories
+node_modules/
+tmp/
+logs/
+.cache/
+
+# Ignore build artifacts
+*.pyc
+*.pyo
+*.git/
+
+# Ignore the .env file with sensitive information
+.env
+
+# Ignore specific Docker-related files
+.dockerignore
+docker-compose.yml
+Docker/
+venv/
+.venv/

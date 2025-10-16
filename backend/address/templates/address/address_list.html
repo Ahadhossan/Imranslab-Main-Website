@@ -1,0 +1,41 @@
+{% extends "address/base.html" %}
+{% block content %}
+<h1>All Addresses</h1>
+<table class="table table-striped">
+    <thead>
+<!--    Name, phone, province/region, city, area, address-->
+    <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Country</th>
+        <th>Province/Region</th>
+        <th>City</th>
+        <th>Area</th>
+        <th>Street</th>
+        <th>Address</th>
+        <th>Actions</th>
+
+    </tr>
+    </thead>
+    <tbody>
+    {% for address in addresses %}
+    <tr>
+        <td>{{ address.name }}</td>
+        <td>{{ address.phone }}</td>
+        <td>{{ address.country }}</td>
+        <td>{{ address.province }}</td>
+        <td>{{ address.city }}</td>
+        <td>{{ address.area }}</td>
+        <td>{{ address.road_street }}</td>
+        <td>{{ address.address }}</td>
+
+        <td>
+            <a href="{% url 'update_address' address.pk %}" class="btn btn-sm btn-primary">Edit</a>
+            <a href="{% url 'delete_address' address.pk %}" class="btn btn-sm btn-danger">Delete</a>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'create_address' %}" class="btn btn-success">Add New Address</a>
+{% endblock %}

@@ -1,0 +1,113 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'ocr-test:latest'
+        SKIPPED_TXT_PATH = 'ci/skipped_tests/skipped_tests.txt'
+        CONSOLE_OUT_PATH = 'logs/test-runs/console_output.txt'
+        JIRA_SITE = 'imranslab-jira'
+        JIRA_EPIC_KEY = 'OCR-6'
+        JIRA_PROJECT_KEY = 'OCR'
+    }
+
+    stages {
+        stage('Clean & Checkout') {
+            steps {
+                echo '🧹 Cleaning workspace'
+                deleteDir()
+                echo '📥 Checking out source'
+                checkout scm
+            }
+        }
+
+        stage('Build Test Image') {
+            steps {
+                dir('ocr') {
+                    echo "🐳 Building test image: ${IMAGE_NAME}"
+                    sh "docker build -t ${IMAGE_NAME} -f Docker/Dockerfile.test ."
+                }
+            }
+        }
+
+       stage('Run Tests in Docker & Capture Output') {
+           steps {
+               dir('ocr') {
+                   echo '🚀 Running tests and capturing output'
+                   sh '''
+                       # Create log directory with correct permissions
+                       mkdir -p logs/test-runs
+                       chmod -R 775 logs
+
+                       # Run tests with proper user mapping
+                       docker run --rm --user 1000:1000 \
+                       -v "$PWD":/app/workspace:rw \
+                       -w /app/workspace \
+                       ${IMAGE_NAME} bash -c "
+                           pytest --maxfail=1 --disable-warnings --tb=short \
+                           --junitxml=logs/test-runs/junit_output.xml 2>&1 | \
+                           tee logs/test-runs/console_output.txt
+                       "
+
+                       # Verify output files
+                       echo "=== Generated Files ==="
+                       ls -l logs/test-runs
+                       echo "=== File Permissions ==="
+                       stat logs/test-runs/*
+                   '''
+               }
+           }
+       }
+
+        stage('Process Skipped Tests') {
+            steps {
+                dir('ocr') {
+                    echo '📝 Analyzing test results'
+                    sh 'chmod +x run_skip_extraction.sh'
+                    sh '''
+                        ./run_skip_extraction.sh
+                        echo "=== Skipped Tests Content ==="
+                        cat ${SKIPPED_TXT_PATH} || true
+                    '''
+                }
+            }
+        }
+
+        stage('Create Jira Issues') {
+            steps {
+                dir('ocr') {
+                    script {
+                        if (fileExists(env.SKIPPED_TXT_PATH)) {
+                            def skippedContent = readFile(env.SKIPPED_TXT_PATH)
+                            if (skippedContent.contains("SKIPPED")) {
+                                echo "🚨 Creating Jira issues for skipped tests"
+                                withCredentials([
+                                    usernamePassword(
+                                        credentialsId: 'jira-creds',
+                                        usernameVariable: 'JIRA_USER',
+                                        passwordVariable: 'JIRA_TOKEN'
+                                    )
+                                ]) {
+                                    sh """
+                                        python3 ci/skipped_tests/create_jira_bug.py \
+                                        ${env.SKIPPED_TXT_PATH}
+                                    """
+                                }
+                            } else {
+                                echo "✅ No skipped tests found"
+                            }
+                        } else {
+                            echo "⚠️ Skipped tests file missing"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo '🧹 Final cleanup'
+            cleanWs()
+        }
+    }
+}

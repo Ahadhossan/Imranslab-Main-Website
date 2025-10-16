@@ -1,0 +1,19 @@
+{
+    "width": 2480,
+    "height": 3508,
+    "dpi": 300,
+    "noise_intensity": 40,
+    "noise_blur_ksize": 9,
+    "column_count": 4,
+    "gutter_width": 20,
+    "border_thickness": 10,
+    "paper_color": [
+        230,
+        230,
+        225
+    ],
+    "margin": 50,
+    "line_thickness": 2,
+    "output_file": "newspaper.png",
+    "output_dir": "/home/imranspc/bedrock/ocr/test_data/synthetic_data/synthetic_data_factory/paper_type/newspaper"
+}

@@ -1,0 +1,141 @@
+pipeline {
+  agent any
+
+  environment {
+    DRIVE_FOLDER = '1-IdLc7JASMb5dAY00mgAhUYoo-ZJQars'
+    IMAGE_NAME = 'ocr-ci:latest'
+  }
+
+  stages {
+
+    stage('0. Clean & Checkout') {
+      steps {
+        echo '🧹 Cleaning workspace before checkout'
+        deleteDir()
+        echo '📥 Checking out source code'
+        checkout scm
+      }
+    }
+
+    stage('1. Build CI Docker Image') {
+      steps {
+        dir('ocr') {
+          sh """
+            docker build -t ${IMAGE_NAME} \\
+              -f Docker/Dockerfile.ci \\
+              .
+          """
+        }
+      }
+    }
+
+    stage('2. Create Timestamped File') {
+      steps {
+        script {
+          // Create the random file in the real workspace
+          def raw = sh(
+            script: """
+              docker run --rm \\
+                -v "${WORKSPACE}:/data" \\
+                -w /data \\
+                ${IMAGE_NAME} \\
+                python3 /workspace/upload_to_drive.py --create
+            """,
+            returnStdout: true
+          ).trim()
+
+          echo "📄 Create Output:\n${raw}"
+
+          def parts = raw.split('File created:')
+          if (parts.size() < 2) {
+            error "❌ Failed to create timestamped file"
+          }
+          env.FILE_NAME = parts[1].trim()
+          echo "📄 Created file: ${env.FILE_NAME}"
+        }
+      }
+    }
+
+    stage('3. Upload File to Drive') {
+      steps {
+        withCredentials([file(credentialsId: 'gcs-sa-key', variable: 'GDRIVE_SA_FILE')]) {
+          script {
+            def raw = sh(
+              script: """
+                docker run --rm \\
+                  -e DRIVE_FOLDER="${DRIVE_FOLDER}" \\
+                  -v "${GDRIVE_SA_FILE}:/tmp/sa.json:ro" \\
+                  -v "${WORKSPACE}/${FILE_NAME}:/data/${FILE_NAME}:ro" \\
+                  ${IMAGE_NAME} \\
+                  python3 /workspace/upload_to_drive.py \\
+                    --upload --key /tmp/sa.json \\
+                    --folder "$DRIVE_FOLDER" \\
+                    --file "/data/${FILE_NAME}"
+              """,
+              returnStdout: true
+            ).trim()
+
+            echo "🚀 Upload Output:\n${raw}"
+
+            def parts2 = raw.split('with ID:')
+            if (parts2.size() < 2) {
+              error "❌ Failed to extract file ID"
+            }
+            env.FILE_ID = parts2[1].trim().split()[0]
+            echo "🆔 Extracted file ID: ${env.FILE_ID}"
+          }
+        }
+      }
+    }
+
+    stage('4. Verify Upload') {
+      steps {
+        withCredentials([file(credentialsId: 'gcs-sa-key', variable: 'GDRIVE_SA_FILE')]) {
+          script {
+            def out = sh(
+              script: """
+                docker run --rm \\
+                  -v "${GDRIVE_SA_FILE}:/tmp/sa.json:ro" \\
+                  -v "${WORKSPACE}/${FILE_NAME}:/data/${FILE_NAME}:ro" \\
+                  ${IMAGE_NAME} \\
+                  python3 /workspace/upload_to_drive.py \\
+                    --verify \\
+                    --key /tmp/sa.json \\
+                    --id "${FILE_ID}" \\
+                    --file "/data/${FILE_NAME}"
+              """,
+              returnStdout: true
+            ).trim()
+
+            echo "🔍 Verification output:\n${out}"
+
+            // 1) Check ID match
+            def actualIdLine = out.split('\n').find { it.startsWith('id:') } ?: ''
+            def actualId = actualIdLine.tokenize(':').last()
+            if (actualId != env.FILE_ID) {
+              error """❌ Verification failed: ID mismatch
+                      • Expected: ${env.FILE_ID}
+                      • Got     : ${actualId}
+                    Full verify log above."""
+            }
+
+            // 2) Check content match marker
+            if (!out.contains('Content matches local file')) {
+              error """❌ Verification failed: content mismatch
+                      Inspect “=== Remote Content ===” vs “=== Local Content ===” in the log above."""
+            }
+
+            echo "✅ Verified ID and content match successfully."
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      echo '🧹 Final cleanup'
+      cleanWs()
+    }
+  }
+}

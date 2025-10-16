@@ -1,0 +1,102 @@
+logging:
+  level: INFO
+  file: pipeline.log
+
+save_intermediate: false
+
+steps:
+  - name: grayscale
+    enabled: true
+    params: {}
+  - name: normalization
+    enabled: true
+    params:
+      norm_type: 32  # cv2.NORM_MINMAX
+      alpha: 0
+      beta: 255
+  - name: hist_equalization
+    enabled: true
+    params: {}
+  - name: gamma_correction
+    enabled: true
+    params:
+      gamma: 1.0
+  - name: gaussian_blur
+    enabled: true
+    params:
+      ksize: 5
+      sigma: 0
+  - name: median_blur
+    enabled: true
+    params:
+      ksize: 5
+  - name: nlmeans_denoise
+    enabled: true
+    params:
+      h: 10
+      hColor: 10
+      templateWindowSize: 7
+      searchWindowSize: 21
+  - name: threshold
+    enabled: true
+    params:
+      method: otsu
+      threshold_value: 127
+  - name: adaptive_threshold
+    enabled: false
+    params:
+      method: gaussian
+      block_size: 11
+      C: 2
+  - name: invert
+    enabled: true
+    params: {}
+  - name: morph_open
+    enabled: true
+    params:
+      ksize: 3
+      kernel_shape: rect
+      target: dark
+  - name: morph_close
+    enabled: true
+    params:
+      ksize: 3
+      kernel_shape: rect
+      target: dark
+  - name: dilate
+    enabled: true
+    params:
+      ksize: 3
+      kernel_shape: rect
+      target: dark
+      iterations: 1
+  - name: erode
+    enabled: true
+    params:
+      ksize: 3
+      kernel_shape: rect
+      target: dark
+      iterations: 1
+  - name: remove_small_components
+    enabled: true
+    params:
+      min_size: 5
+  - name: deskew
+    enabled: true
+    params: {}
+  - name: crop
+    enabled: true
+    params:
+      bg_threshold: 250
+  - name: skeletonize
+    enabled: false
+    params: {}
+  - name: sharpen
+    enabled: true
+    params: {}
+  - name: resize
+    enabled: true
+    params:
+      target_width: 1024
+      target_height: 1024
+      upscale_only: true

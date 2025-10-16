@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body {
+    @apply bg-[#fff] text-gray-300 font-inter;
+}
+
+
+@layer utilities {
+    .flex-center {
+        @apply flex items-center;
+    }
+    .flex-center-between {
+        @apply flex items-center justify-between;
+    }
+}
+
+
+/* Optional custom theme */
+
+
+.header-bg {
+    background: linear-gradient( rgb(8, 8, 8, 0.9), rgba(24, 24, 24, 0.9), rgba(8, 1, 1, 0.9)), url('https://i.ibb.co/CsM20qQ7/banner.png');
+    background-size: cover;
+    background-position: center;
+}

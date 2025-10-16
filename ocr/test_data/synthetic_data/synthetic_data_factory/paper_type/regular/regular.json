@@ -1,0 +1,15 @@
+{
+    "width": 2000,
+    "height": 3508,
+    "dpi": 600,
+    "gradient_intensity": 1,
+    "border_thickness": 20,
+    "paper_color": [
+        240,
+        240,
+        240
+    ],
+    "margin": 0,
+    "line_thickness": 1,
+    "output_file": "regular.png"
+}

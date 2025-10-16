@@ -1,0 +1,21 @@
+FROM ubuntu:24.04
+
+# 1. Install OS packages (including rclone & venv support)
+COPY ../apt-requirements.txt /tmp/apt-requirements.txt
+RUN apt-get update \
+ && xargs -a /tmp/apt-requirements.txt apt-get install -y \
+ && rm -rf /var/lib/apt/lists/*
+
+# 2. Create a Python venv and install your Python deps into it
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY ../requirements.txt /workspace/requirements.txt
+RUN pip install --upgrade pip setuptools \
+ && pip install --no-cache-dir -r /workspace/requirements.txt
+
+# 3. Copy in your uploader script
+COPY ../upload_to_drive.py /workspace/upload_to_drive.py
+RUN chmod +x /workspace/upload_to_drive.py
+
+WORKDIR /workspace

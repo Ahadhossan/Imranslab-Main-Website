@@ -1,0 +1,38 @@
+# Use latest stable Python
+FROM python:3.12-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    WORKSPACE_DIR="/app/workspace"
+
+# Create directory structure with proper permissions
+RUN mkdir -p ${WORKSPACE_DIR}/logs/test-runs && \
+    chown -R 1000:1000 /app && \
+    chmod -R 775 /app
+
+# Install system dependencies
+COPY apt-requirements.txt /tmp/apt-requirements.txt
+RUN apt-get update && \
+    xargs -a /tmp/apt-requirements.txt apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/* /tmp/apt-requirements.txt
+
+# Set working directory
+WORKDIR ${WORKSPACE_DIR}
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip check
+
+# Copy application code
+COPY . .
+
+# Ensure scripts are executable
+RUN chmod +x run_skip_extraction.sh
+
+# Final permissions fix
+RUN chown -R 1000:1000 ${WORKSPACE_DIR} && \
+    chmod -R 775 ${WORKSPACE_DIR}

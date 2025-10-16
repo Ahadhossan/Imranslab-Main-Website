@@ -1,0 +1,53 @@
+/* coverage.css */
+
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f9f9fb;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+#content {
+    max-width: 1200px;
+    margin: auto;
+    padding: 1rem;
+}
+
+#sidebar {
+    background: #2a3f5f;
+}
+
+#sidebar h1, #sidebar h2 {
+    color: #fff;
+}
+
+#left h2 {
+    background-color: #4CAF50;
+    color: #fff;
+    padding: 0.5rem;
+}
+
+table.coverage th {
+    background-color: #4CAF50;
+    color: #fff;
+    padding: 0.5rem;
+}
+
+table.coverage td {
+    padding: 0.4rem;
+}
+
+.coverage .missing {
+    background-color: #ffdddd;
+}
+
+.coverage .covered {
+    background-color: #ddffdd;
+}
+
+#coverage-summary .box .pct {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #4CAF50;
+}

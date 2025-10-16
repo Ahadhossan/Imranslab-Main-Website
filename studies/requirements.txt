@@ -1,0 +1,6 @@
+pytest
+setuptools
+requests
+pytest-html
+
+

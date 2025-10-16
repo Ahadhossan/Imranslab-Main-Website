@@ -1,0 +1,12 @@
+### Creating a ubuntu 22. vm with gui ###
+  Disk used : 11GB 
+
+
+### Creating a ubuntu 22. vm without gui ###
+  Disk used : 2.7GB
+
+
+### Jenkins-agent ####
+ocr project's script tested here multiple times.
+
+Disk Used : 20GB

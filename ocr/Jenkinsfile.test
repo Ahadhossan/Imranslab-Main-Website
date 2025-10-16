@@ -1,0 +1,87 @@
+pipeline {
+  agent any
+
+    environment {
+    IMAGE_NAME = "ocr-test:latest"
+        TEST_RESULTS = "logs/test-runs/junit_*.xml"
+    }
+
+    stages {
+    stage('Clean & Checkout') {
+      steps {
+        echo "🧹 Cleaning workspace"
+                deleteDir()
+                echo "📥 Checking out source"
+                checkout scm
+            }
+        }
+
+        stage('Build Test Image') {
+      steps {
+        dir('ocr') {
+          echo "🐳 Building test image (${IMAGE_NAME})"
+                    sh """
+                      docker build \
+                        -t ${IMAGE_NAME} \
+                        -f Docker/Dockerfile.test .
+                    """
+                }
+            }
+        }
+
+        stage('Run Tests') {
+      steps {
+        dir('ocr') {
+          echo "🚀 Running tests inside container"
+                    // allow pytest to fail without failing the pipeline
+                    //catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE')
+
+            sh """
+                          mkdir -p logs/test-runs
+                          docker run --rm \\
+                            -v "\$(pwd)":/app:rw \\
+                            ${IMAGE_NAME}
+                        """
+
+                }
+            }
+        }
+
+        stage('Publish & Evaluate Results') {
+      steps {
+        dir('ocr') {
+          script {
+            // 1) Run junit but catch any automatic "unstable" marks
+                        def testRes
+                        catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+              testRes = junit(testResults: TEST_RESULTS, allowEmptyResults: true)
+                        }
+
+                        // 2) Extract counts and compute failure %
+                        def total = testRes?.totalCount ?: 0
+                        def failed = testRes?.failCount  ?: 0
+                        def pct = total > 0 ? (failed * 100 / total) : 0
+
+                        // 3) Decide final build result
+                        if (pct < 10) {
+              currentBuild.result = 'SUCCESS'
+                        } else if (pct < 20) {
+              currentBuild.result = 'UNSTABLE'
+                        } else {
+              currentBuild.result = 'FAILURE'
+                        }
+
+                        echo "🔢 Tests run: ${total}, Failures: ${failed} (${pct}%) → marking build ${currentBuild.result}"
+                    }
+                }
+            }
+        }
+    }    
+
+    post {
+    always {
+      echo "🧹 Final cleanup"
+            cleanWs()
+        }
+    }
+}

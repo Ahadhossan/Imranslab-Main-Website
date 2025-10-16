@@ -1,0 +1,11 @@
+==================================== ERRORS ====================================
+_ ERROR collecting tests/test_synthetic_data_factory/test_synthetic_input_data_factory.py _
+ImportError while importing test module '/app/tests/test_synthetic_data_factory/test_synthetic_input_data_factory.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.9/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_synthetic_data_factory/test_synthetic_input_data_factory.py:9: in <module>
+    from test_data.synthetic_data.synthetic_data_factory.synthetic_input_data_factory import SyntheticInputDataFactory
+E   ImportError: cannot import name 'SyntheticInputDataFactory' from 'test_data.synthetic_data.synthetic_data_factory.synthetic_input_data_factory' (/app/test_data/synthetic_data/synthetic_data_factory/synthetic_input_data_factory.py)
+_ ERROR collecting tests/test_synthetic_data_factory/test_synthetic_output_data_factory.py _

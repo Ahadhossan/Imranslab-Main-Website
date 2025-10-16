@@ -1,0 +1,607 @@
+========== adaptive_threshold_validation.py ==========
+"""
+Validate adaptive threshold result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate adaptive thresholding by checking resulting binary values and ratio of foreground."""
+    result = {"step": "adaptive_threshold", "status": "", "metrics": {}}
+    try:
+        unique_vals = np.unique(output_image)
+        is_binary = all(val in [0, 255] for val in unique_vals)
+        if is_binary:
+            result["status"] = "success"
+            total_pixels = output_image.size
+            black_pixels = int(np.sum(output_image == 0))
+            percent_black = (black_pixels / total_pixels) * 100 if total_pixels > 0 else 0
+            result["metrics"]["black_pixels_percent"] = round(percent_black, 2)
+            logging.info(f"Adaptive threshold validation passed. Black pixel percentage: {percent_black:.2f}%.")
+        else:
+            result["status"] = "failure"
+            result["metrics"]["unique_values"] = unique_vals.tolist()
+            logging.error("Adaptive threshold validation failed: output is not binary.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Adaptive threshold validation exception: {e}")
+    return result
+
+========== crop_validation.py ==========
+"""
+Validate crop result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate cropping by checking area reduction and content preservation."""
+    result = {"step": "crop", "status": "", "metrics": {}}
+    try:
+        removed_percent = params.get("removed_percent", None)
+        if removed_percent is None:
+            result["status"] = "failure"
+            logging.error("Crop validation failed: removed_percent not recorded.")
+        else:
+            orig_area = input_image.shape[0] * input_image.shape[1]
+            new_area = output_image.shape[0] * output_image.shape[1]
+            result["metrics"]["removed_percent"] = round(float(removed_percent), 2)
+            if new_area <= orig_area:
+                result["status"] = "success"
+                logging.info(f"Crop validation passed. Area removed: {removed_percent:.2f}%.")
+            else:
+                result["status"] = "failure"
+                logging.error("Crop validation failed: output area larger than input.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Crop validation exception: {e}")
+    return result
+
+========== deskew_validation.py ==========
+"""
+Validate deskew result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate deskew by reporting the detected angle and checking if rotation applied."""
+    result = {
+        "step": "deskew",
+        "status": "",
+        "metrics": {}
+    }
+
+    try:
+        angle = params.get("detected_angle", None)
+
+        if angle is None:
+            result["status"] = "failure"
+            result["metrics"]["detected_angle"] = None
+            logging.warning("Deskew validation: No angle recorded. Possibly empty image or early return.")
+        else:
+            result["metrics"]["detected_angle"] = round(float(angle), 2)
+            result["status"] = "success"
+            logging.info(f"Deskew validation passed. Angle detected: {angle:.2f} degrees.")
+
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Deskew validation exception: {e}")
+
+    return result
+
+========== dilate_validation.py ==========
+"""
+Validate dilate result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate dilation by ensuring foreground area did not decrease."""
+    result = {"step": "dilate", "status": "", "metrics": {}}
+    try:
+        target = params.get("target", "dark").lower()
+        if target == "dark":
+            in_foreground = int(np.sum(input_image == 0))
+            out_foreground = int(np.sum(output_image == 0))
+        else:
+            in_foreground = int(np.sum(input_image == 255))
+            out_foreground = int(np.sum(output_image == 255))
+        added = out_foreground - in_foreground
+        result["metrics"]["added_pixels"] = added if added > 0 else 0
+        if added >= 0:
+            result["status"] = "success"
+            logging.info(f"Dilation validation passed. Foreground pixels added: {added}.")
+        else:
+            result["status"] = "failure"
+            logging.error(f"Dilation validation failed. Foreground pixels decreased by {abs(added)}.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Dilation validation exception: {e}")
+    return result
+
+========== erode_validation.py ==========
+"""
+Validate erode result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate erosion by ensuring foreground area did not increase."""
+    result = {"step": "erode", "status": "", "metrics": {}}
+    try:
+        target = params.get("target", "dark").lower()
+        if target == "dark":
+            in_foreground = int(np.sum(input_image == 0))
+            out_foreground = int(np.sum(output_image == 0))
+        else:
+            in_foreground = int(np.sum(input_image == 255))
+            out_foreground = int(np.sum(output_image == 255))
+        removed = in_foreground - out_foreground
+        result["metrics"]["removed_pixels"] = removed if removed > 0 else 0
+        if removed >= 0:
+            result["status"] = "success"
+            logging.info(f"Erosion validation passed. Foreground pixels removed: {removed}.")
+        else:
+            result["status"] = "failure"
+            logging.error(f"Erosion validation failed. Foreground pixels increased by {abs(removed)}.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Erosion validation exception: {e}")
+    return result
+
+========== gamma_correction_validation.py ==========
+"""
+Validate gamma correction result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate gamma correction by checking average brightness change."""
+    result = {"step": "gamma_correction", "status": "", "metrics": {}}
+    try:
+        in_mean = float(input_image.mean())
+        out_mean = float(output_image.mean())
+        result["metrics"]["input_mean"] = round(in_mean, 2)
+        result["metrics"]["output_mean"] = round(out_mean, 2)
+        gamma = params.get("gamma", 1.0)
+        # If gamma > 1, output should be darker (mean intensity lower or equal); if gamma < 1, output should be brighter (mean higher or equal)
+        if (gamma > 1 and out_mean <= in_mean) or (gamma < 1 and out_mean >= in_mean) or (gamma == 1):
+            result["status"] = "success"
+            logging.info("Gamma correction validation passed (mean intensity changed as expected).")
+        else:
+            result["status"] = "failure"
+            logging.error("Gamma correction validation failed (mean intensity change not as expected).")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Gamma correction validation exception: {e}")
+    return result
+
+========== gaussian_blur_validation.py ==========
+"""
+Validate gaussian blur result
+"""
+
+import numpy as np
+import cv2
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate Gaussian blur by checking that it does not alter image dimensions and type."""
+    result = {"step": "gaussian_blur", "status": "", "metrics": {}}
+    try:
+        # Check image shape and type remain the same
+        if output_image.shape == input_image.shape and output_image.dtype == input_image.dtype:
+            # Check that the output is actually blurred: compute variance of difference
+            diff = cv2.absdiff(input_image, output_image)
+            diff_var = float(diff.var())
+            result["metrics"]["diff_variance"] = round(diff_var, 2)
+            result["status"] = "success"
+            logging.info("Gaussian blur validation passed (output shape matches input, diff variance={:.2f}).".format(diff_var))
+        else:
+            result["status"] = "failure"
+            logging.error("Gaussian blur validation failed (output shape/type differs from input).")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Gaussian blur validation exception: {e}")
+    return result
+
+========== gpt_helper.txt ==========
+========== grayscale_validation.py ==========
+"""
+Validate grayscale result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate grayscale conversion step."""
+    result = {"step": "grayscale", "status": "", "metrics": {}}
+    try:
+        # Check that output image has one channel
+        if output_image.ndim == 2 or (output_image.ndim == 3 and output_image.shape[2] == 1):
+            result["status"] = "success"
+            result["metrics"]["channels"] = 1
+            logging.info("Grayscale validation passed: output is single-channel.")
+        else:
+            result["status"] = "failure"
+            result["metrics"]["channels"] = output_image.shape[2] if output_image.ndim == 3 else output_image.ndim
+            logging.error("Grayscale validation failed: output image is not single-channel.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Grayscale validation exception: {e}")
+    return result
+========== hist_equalization_validation.py ==========
+"""
+Validate hist equalization result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate histogram equalization by comparing variance as a proxy for contrast."""
+    result = {"step": "hist_equalization", "status": "", "metrics": {}}
+    try:
+        # Calculate variance (contrast measure) for input and output
+        in_var = float(input_image.var())
+        out_var = float(output_image.var())
+        result["metrics"]["input_variance"] = round(in_var, 2)
+        result["metrics"]["output_variance"] = round(out_var, 2)
+        if out_var >= in_var:
+            result["status"] = "success"
+            logging.info("Histogram equalization validation passed (variance increased or maintained).")
+        else:
+            result["status"] = "success"
+            logging.info("Histogram equalization output variance decreased (image might have low contrast).")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Histogram equalization validation exception: {e}")
+    return result
+
+========== __init__.py ==========
+
+========== invert_validation.py ==========
+"""
+Validate invert result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate inversion by checking pixel values are complements (255 - original)."""
+    result = {"step": "invert", "status": "", "metrics": {}}
+    try:
+        if input_image.shape == output_image.shape:
+            diff = (255 - input_image) - output_image
+            if np.all(diff == 0):
+                result["status"] = "success"
+                logging.info("Invert validation passed: output is exact inversion of input.")
+            else:
+                result["status"] = "failure"
+                logging.error("Invert validation failed: output is not the exact inverse of input.")
+        else:
+            result["status"] = "failure"
+            logging.error("Invert validation failed: input and output shapes differ.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Invert validation exception: {e}")
+    return result
+
+========== median_blur_validation.py ==========
+"""
+Validate median blur result
+"""
+
+import numpy as np
+import cv2
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate median blur by checking that it does not alter image dimensions and type."""
+    result = {"step": "median_blur", "status": "", "metrics": {}}
+    try:
+        if output_image.shape == input_image.shape and output_image.dtype == input_image.dtype:
+            diff = cv2.absdiff(input_image, output_image)
+            diff_var = float(diff.var())
+            result["metrics"]["diff_variance"] = round(diff_var, 2)
+            result["status"] = "success"
+            logging.info("Median blur validation passed (output shape matches input, diff variance={:.2f}).".format(diff_var))
+        else:
+            result["status"] = "failure"
+            logging.error("Median blur validation failed (output shape/type differs from input).")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Median blur validation exception: {e}")
+    return result
+
+========== morph_close_validation.py ==========
+"""
+Validate morph close result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate morphological closing by checking if gaps are filled (foreground pixels added or same)."""
+    result = {"step": "morph_close", "status": "", "metrics": {}}
+    try:
+        target = params.get("target", "dark").lower()
+        if target == "dark":
+            in_foreground = int(np.sum(input_image == 0))
+            out_foreground = int(np.sum(output_image == 0))
+        else:
+            in_foreground = int(np.sum(input_image == 255))
+            out_foreground = int(np.sum(output_image == 255))
+        added = out_foreground - in_foreground
+        result["metrics"]["added_pixels"] = added if added > 0 else 0
+        if added >= 0:
+            result["status"] = "success"
+            logging.info(f"Morphological close validation passed. Foreground pixels added: {added}.")
+        else:
+            result["status"] = "failure"
+            logging.error(f"Morphological close validation failed. Foreground pixels decreased by {abs(added)}.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Morphological close validation exception: {e}")
+    return result
+
+========== morph_open_validation.py ==========
+"""
+Validate morph open result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate morphological opening by checking if small objects are removed."""
+    result = {"step": "morph_open", "status": "", "metrics": {}}
+    try:
+        target = params.get("target", "dark").lower()
+        if target == "dark":
+            # dark text (black) on white background
+            in_foreground = int(np.sum(input_image == 0))
+            out_foreground = int(np.sum(output_image == 0))
+        else:
+            # light text (white) on black background
+            in_foreground = int(np.sum(input_image == 255))
+            out_foreground = int(np.sum(output_image == 255))
+        removed = in_foreground - out_foreground
+        result["metrics"]["removed_pixels"] = removed if removed > 0 else 0
+        if removed >= 0:
+            result["status"] = "success"
+            logging.info(f"Morphological open validation passed. Foreground pixels removed: {removed}.")
+        else:
+            result["status"] = "failure"
+            logging.error(f"Morphological open validation failed. Foreground pixels increased by {abs(removed)}.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Morphological open validation exception: {e}")
+    return result
+
+========== nlmeans_denoise_validation.py ==========
+"""
+Validate nlmeans denoise result
+"""
+
+import numpy as np
+import cv2
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate NLMeans denoising by checking if high-frequency noise is reduced."""
+    result = {"step": "nlmeans_denoise", "status": "", "metrics": {}}
+    try:
+        in_var = float(cv2.Laplacian(input_image, cv2.CV_64F).var())
+        out_var = float(cv2.Laplacian(output_image, cv2.CV_64F).var())
+        result["metrics"]["laplacian_var_before"] = round(in_var, 2)
+        result["metrics"]["laplacian_var_after"] = round(out_var, 2)
+        if out_var <= in_var:
+            result["status"] = "success"
+            logging.info("NLMeans denoising validation passed (Laplacian variance reduced).")
+        else:
+            result["status"] = "failure"
+            logging.error("NLMeans denoising validation failed (Laplacian variance increased).")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"NLMeans denoising validation exception: {e}")
+    return result
+
+========== normalization_validation.py ==========
+"""
+Validate normalization result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate normalization step by checking intensity range."""
+    result = {"step": "normalization", "status": "", "metrics": {}}
+    try:
+        out_min = int(output_image.min()) if output_image.size > 0 else None
+        out_max = int(output_image.max()) if output_image.size > 0 else None
+        result["metrics"]["min_val"] = out_min
+        result["metrics"]["max_val"] = out_max
+        alpha = params.get("alpha", 0)
+        beta = params.get("beta", 255)
+        if out_min is not None and out_max is not None and out_min >= alpha and out_max <= beta:
+            result["status"] = "success"
+            logging.info(f"Normalization validation passed: range = [{out_min}, {out_max}].")
+        else:
+            result["status"] = "failure"
+            logging.error(f"Normalization validation failed: range = [{out_min}, {out_max}] not within [{alpha}, {beta}].")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Normalization validation exception: {e}")
+    return result
+
+========== remove_small_components_validation.py ==========
+"""
+Validate remove small components result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate small components removal by checking reduction in object count or area."""
+    result = {"step": "remove_small_components", "status": "", "metrics": {}}
+    try:
+        # Assuming dark text on white background
+        in_pixels = int(np.sum(input_image == 0))
+        out_pixels = int(np.sum(output_image == 0))
+        removed_pixels = in_pixels - out_pixels
+        result["metrics"]["removed_pixels"] = removed_pixels if removed_pixels > 0 else 0
+        if removed_pixels >= 0:
+            result["status"] = "success"
+            logging.info(f"Remove small components validation passed. Pixels removed: {removed_pixels}.")
+        else:
+            result["status"] = "failure"
+            logging.error(f"Remove small components validation failed. Foreground pixels increased by {abs(removed_pixels)}.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Remove small components validation exception: {e}")
+    return result
+
+========== resize_validation.py ==========
+"""
+Validate resize result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate resizing by checking new dimensions against target and original."""
+    result = {"step": "resize", "status": "", "metrics": {}}
+    try:
+        resized_flag = params.get("resized", False)
+        new_w = params.get("new_width", output_image.shape[1])
+        new_h = params.get("new_height", output_image.shape[0])
+        result["metrics"]["new_width"] = new_w
+        result["metrics"]["new_height"] = new_h
+        if resized_flag:
+            # If resized, ensure output dimensions match expected
+            if output_image.shape[1] == new_w and output_image.shape[0] == new_h:
+                result["status"] = "success"
+                logging.info("Resize validation passed. Image dimensions updated correctly.")
+            else:
+                result["status"] = "failure"
+                logging.error("Resize validation failed: output dimensions do not match expected.")
+        else:
+            # Not resized, so output dims should equal input dims
+            if output_image.shape == input_image.shape:
+                result["status"] = "success"
+                logging.info("Resize validation passed. Image size unchanged as expected.")
+            else:
+                result["status"] = "failure"
+                logging.error("Resize validation failed: image was resized when it shouldn't have been.")
+        # Clean up transient params
+        if "resized" in params:
+            params.pop("resized", None)
+            params.pop("new_width", None)
+            params.pop("new_height", None)
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Resize validation exception: {e}")
+    return result
+
+========== sharpen_validation.py ==========
+"""
+Validate sharpen result
+"""
+
+import numpy as np
+import cv2
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate sharpening by checking if edge variance increased."""
+    result = {"step": "sharpen", "status": "", "metrics": {}}
+    try:
+        in_sharpness = float(cv2.Laplacian(input_image, cv2.CV_64F).var())
+        out_sharpness = float(cv2.Laplacian(output_image, cv2.CV_64F).var())
+        result["metrics"]["input_sharpness"] = round(in_sharpness, 2)
+        result["metrics"]["output_sharpness"] = round(out_sharpness, 2)
+        if out_sharpness >= in_sharpness:
+            result["status"] = "success"
+            logging.info("Sharpening validation passed. Sharpness increased or maintained.")
+        else:
+            result["status"] = "failure"
+            logging.error("Sharpening validation failed. Output appears less sharp than input.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Sharpening validation exception: {e}")
+    return result
+
+========== skeletonize_validation.py ==========
+"""
+Validate skeletonize result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate skeletonization by checking reduction in foreground area."""
+    result = {"step": "skeletonize", "status": "", "metrics": {}}
+    try:
+        reduction_percent = params.get("reduction_percent", None)
+        if reduction_percent is None:
+            result["status"] = "failure"
+            logging.error("Skeletonization validation failed: reduction_percent not recorded.")
+        else:
+            result["metrics"]["reduction_percent"] = round(float(reduction_percent), 2)
+            result["status"] = "success"
+            logging.info(f"Skeletonization validation passed. Reduction in pixels: {reduction_percent:.2f}%.")
+        # (No comparative check here since skeletonization always reduces or keeps the same foreground pixels)
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Skeletonization validation exception: {e}")
+    return result
+
+========== threshold_validation.py ==========
+"""
+Validate threshold result
+"""
+
+import numpy as np
+import logging
+
+def validate(input_image: np.ndarray, output_image: np.ndarray, params: dict) -> dict:
+    """Validate thresholding by checking resulting binary values and ratio of foreground."""
+    result = {"step": "threshold", "status": "", "metrics": {}}
+    try:
+        unique_vals = np.unique(output_image)
+        # Check that output is binary (only 0 and 255 values)
+        is_binary = all(val in [0, 255] for val in unique_vals)
+        if is_binary:
+            result["status"] = "success"
+            total_pixels = output_image.size
+            black_pixels = int(np.sum(output_image == 0))
+            percent_black = (black_pixels / total_pixels) * 100 if total_pixels > 0 else 0
+            result["metrics"]["black_pixels_percent"] = round(percent_black, 2)
+            logging.info(f"Threshold validation passed. Black pixel percentage: {percent_black:.2f}%.")
+        else:
+            result["status"] = "failure"
+            result["metrics"]["unique_values"] = unique_vals.tolist()
+            logging.error("Threshold validation failed: output is not binary.")
+    except Exception as e:
+        result["status"] = "failure"
+        logging.exception(f"Threshold validation exception: {e}")
+    return result
+

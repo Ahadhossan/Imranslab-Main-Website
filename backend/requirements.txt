@@ -1,0 +1,9 @@
+Django~=5.1.4
+python-decouple~=3.8
+django-cors-headers
+gunicorn>=22.0.0
+psycopg2-binary==2.9.3
+djangorestframework # for REST API
+drf-yasg # for swagger, a must have for any API project
+
+# pip install Django~=5.1.4 python-decouple~=3.8 django-cors-headers gunicorn>=22.0.0 psycopg2-binary==2.9.3 djangorestframework drf-yasg
